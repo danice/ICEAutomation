@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using FlaUI.Core.Definitions;
@@ -11,81 +13,37 @@ namespace ImageComposeEditorAutomation
     {
         static void Main(string[] args)
         {
-            var appStr = @"C:\Program Files\Microsoft Research\Image Composite Editor\ICE.exe";
-            var imgStr = string.Join(" ", args);
-            var processStartInfo = new ProcessStartInfo(fileName: appStr, arguments: imgStr);
-            var app = FlaUI.Core.Application.Launch(processStartInfo);
-            //var app =  FlaUI.Core.Application.Attach("ICE.exe");
-            using (var automation = new UIA3Automation())
-            {
-                var window = app.GetMainWindow(automation);
-                var title = window.Title;
-                Console.WriteLine("Opened :"+ title);
-                Console.WriteLine("files :" + imgStr);
-                try
-                {
-                    var button1 = window.FindFirstDescendant(cf => cf.ByText("EXPORT"));
-                    if (button1.ControlType != ControlType.Button)
-                        button1 = button1.AsButton().Parent;
-
-                    button1?.AsButton().Invoke();
-                    bool finished = false;
-                    Console.Write("composing.");
-                    do
-                    {
-                        var window2 = app.GetMainWindow(automation);
-
-                        var button2 = window.FindFirstDescendant(cf => cf.ByText("Export to disk..."));
-                        title = window2.Title;
-                        finished = button2 != null && title.StartsWith("U");
-                        int percent = 0;
-                        if (!finished)
-                        {
-                            var percentStr = title.Substring(0, 2);
-                            var numStr = percentStr[1] == '%' ? percentStr.Substring(0,1) : percentStr;
-                            if (int.TryParse(numStr, out percent))
-                            {
-                                drawTextProgressBar(percent, 100);
-                            }
-                        }                        
-                    } while (!finished);
-                    
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-
-                try
-                {
-                    var button2 = window.FindFirstDescendant(cf => cf.ByText("Export to disk..."));
-                    if (button2 != null && button2.ControlType != ControlType.Button)
-                        button2 = button2.AsButton().Parent;
-
-                    button2?.AsButton().Invoke();                    
-                    Console.WriteLine("exporting to disk...");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);                
-                }
-                try
-                {
-                    var saveDlg = window.ModalWindows.FirstOrDefault(w => w.Name == "Export Panorama");
-                    var buttonSave = saveDlg.FindFirstDescendant(cf => cf.ByText("Save")).AsButton();
-                    buttonSave?.Invoke();
-
-                    int milliseconds = 5000;
-                    Thread.Sleep(milliseconds);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-                
+            var composeApp = new ComposeAppService();
+            if (args[0] == "compose") {
+                Console.WriteLine("composing...");
+                composeApp.Compose(args.Skip(1).ToArray(), m => Console.WriteLine(m), i => drawTextProgressBar(1, 100));
             }
-            app.Kill();
+            else if(args[0] == "process") 
+            {                
+                Console.WriteLine("process...");
+                if (args.Length > 1)
+                    Directory.SetCurrentDirectory(args[1]);
+                var extension = args.Length > 2 ? args[2] : "*.JPG";
+                var num = args.Length > 3 ? int.Parse(args[3]) : 3;
+                var files = GroupFiles(extension, num);
+                int total = files.Count;
+                int count = 0;
+                foreach (var item in files)
+                {
+                    count++;
+                    Console.WriteLine(string.Format("composing {0} of {1}....", count, total));
+                    composeApp.Compose(item, m => Console.WriteLine(m), i => drawTextProgressBar(i, 100));
+                }
+            }
             Console.WriteLine("Finished.");
+        }
+
+        private static List<string[]> GroupFiles(string extension, int groupNum)
+        {
+            string[] filePaths = Directory.GetFiles(Directory.GetCurrentDirectory(), extension, SearchOption.TopDirectoryOnly);
+
+            return filePaths.Select((value, index) => new { value, index })
+                    .GroupBy(x => x.index / groupNum, x => Path.GetFileName(x.value)).Select(g => g.ToArray()).ToList();
         }
 
         private static void drawTextProgressBar(int progress, int total)
@@ -118,7 +76,7 @@ namespace ImageComposeEditorAutomation
             ////draw totals
             //Console.CursorLeft = 35;
             //Console.BackgroundColor = ConsoleColor.Black;
-            Console.CursorLeft = 35;
+            Console.CursorLeft = 15;
             Console.Write(progress.ToString() + " of " + total.ToString() + "    "); //blanks at the end remove any excess
         }
     }
