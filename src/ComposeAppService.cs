@@ -4,7 +4,9 @@ using FlaUI.Core.Definitions;
 using FlaUI.UIA3;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -21,7 +23,14 @@ namespace ImageComposeEditorAutomation
         {
             this.onEvent = onEvent;
             this.onProgress = onProgress;
-            var appStr = @"C:\Program Files\Microsoft Research\Image Composite Editor\ICE.exe";
+            var appStr = ConfigurationManager.AppSettings["ICE-app-path"];
+            var appName = Path.GetFileName(appStr);
+            var exportBtnLabel = ConfigurationManager.AppSettings["Export-btn-label"];
+            var exportToDiskBtnLabel = ConfigurationManager.AppSettings["ExportToDisk-btn-label"];
+            var exportPanoramaBtnLabel = ConfigurationManager.AppSettings["ExportPanorama-btn-label"];
+            var saveBtnLabel = ConfigurationManager.AppSettings["Save-btn-label"];
+            int saveWait = int.Parse(ConfigurationManager.AppSettings["Save-wait"]);
+
             var imgStr = string.Join(" ", images);
             var processStartInfo = new ProcessStartInfo(fileName: appStr, arguments: imgStr);
             var app = FlaUI.Core.Application.Launch(processStartInfo);
@@ -33,7 +42,7 @@ namespace ImageComposeEditorAutomation
                 Window window = null;
                 do
                 {
-                    app = FlaUI.Core.Application.Attach("ICE.exe");
+                    app = FlaUI.Core.Application.Attach(appName);
                     window = app.GetMainWindow(automation);
                     title = window.Title;
                     OnEvent("Opened :" + title);
@@ -45,7 +54,7 @@ namespace ImageComposeEditorAutomation
                     AutomationElement button1 = null;
                     do
                     {
-                        button1 = window.FindFirstDescendant(cf => cf.ByText("EXPORT"));
+                        button1 = window.FindFirstDescendant(cf => cf.ByText(exportBtnLabel));
                         if (button1 == null) {
                             OnEvent(".");
                         }                        
@@ -60,7 +69,7 @@ namespace ImageComposeEditorAutomation
                     do
                     {
                         var window2 = app.GetMainWindow(automation);
-                        var button2 = window.FindFirstDescendant(cf => cf.ByText("Export to disk..."));
+                        var button2 = window.FindFirstDescendant(cf => cf.ByText(exportToDiskBtnLabel));
                         
                         title = window2.Title;
                         finished = button2 != null && title.StartsWith("U");
@@ -82,7 +91,7 @@ namespace ImageComposeEditorAutomation
 
                 try
                 {
-                    var button2 = window.FindFirstDescendant(cf => cf.ByText("Export to disk..."));
+                    var button2 = window.FindFirstDescendant(cf => cf.ByText(exportToDiskBtnLabel));
                     if (button2 != null && button2.ControlType != ControlType.Button)
                         button2 = button2.AsButton().Parent;
 
@@ -95,12 +104,11 @@ namespace ImageComposeEditorAutomation
                 }
                 try
                 {
-                    var saveDlg = window.ModalWindows.FirstOrDefault(w => w.Name == "Export Panorama");
-                    var buttonSave = saveDlg.FindFirstDescendant(cf => cf.ByText("Save")).AsButton();
+                    var saveDlg = window.ModalWindows.FirstOrDefault(w => w.Name == exportPanoramaBtnLabel);
+                    var buttonSave = saveDlg.FindFirstDescendant(cf => cf.ByText(saveBtnLabel)).AsButton();
                     buttonSave?.Invoke();
-
-                    int milliseconds = 5000;
-                    Thread.Sleep(milliseconds);
+                    
+                    Thread.Sleep(saveWait);
                 }
                 catch (Exception ex)
                 {
