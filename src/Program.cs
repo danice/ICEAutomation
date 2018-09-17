@@ -21,10 +21,10 @@ namespace ImageComposeEditorAutomation
             else if(args[0] == "process") 
             {                
                 Console.WriteLine("process...");
-                if (args.Length > 1)
-                    Directory.SetCurrentDirectory(args[1]);
+                var num = args.Length > 1 ? int.Parse(args[1]) : 3;
                 var extension = args.Length > 2 ? args[2] : "*.JPG";
-                var num = args.Length > 3 ? int.Parse(args[3]) : 3;
+                if (args.Length > 3)
+                    Directory.SetCurrentDirectory(args[3]);
                 var files = GroupFiles(extension, num);
                 int total = files.Count;
                 int count = 0;
