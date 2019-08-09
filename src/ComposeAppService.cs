@@ -104,7 +104,10 @@ namespace ImageComposeEditorAutomation
                 }
                 try
                 {
-                    var saveDlg = window.ModalWindows.FirstOrDefault(w => w.Name == exportPanoramaBtnLabel);
+                    Thread.Sleep(1000);
+                    var saveDlg = window.ModalWindows.Length == 1 
+                        ? window.ModalWindows[0]
+                        : window.ModalWindows.FirstOrDefault(w => w.Name == exportPanoramaBtnLabel);
                     var buttonSave = saveDlg.FindFirstDescendant(cf => cf.ByText(saveBtnLabel)).AsButton();
                     buttonSave?.Invoke();
                     
