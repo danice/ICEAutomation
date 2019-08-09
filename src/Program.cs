@@ -18,7 +18,7 @@ namespace ImageComposeEditorAutomation
                 Console.WriteLine("composing...");
                 composeApp.Compose(args.Skip(1).ToArray(), m => Console.WriteLine(m), i => drawTextProgressBar(1, 100));
             }
-            else if(args[0] == "process") 
+            else if(args[0] == "process" || args[0] == "processAndSave") 
             {                
                 Console.WriteLine("process...");
                 var num = args.Length > 1 ? int.Parse(args[1]) : 3;
@@ -32,7 +32,8 @@ namespace ImageComposeEditorAutomation
                 {
                     count++;
                     Console.WriteLine(string.Format("composing {0} of {1}....", count, total));
-                    composeApp.Compose(item, m => Console.WriteLine(m), i => drawTextProgressBar(i, 100));
+                    var saveProject = args[0] == "processAndSave";
+                    composeApp.Compose(item, m => Console.WriteLine(m), i => drawTextProgressBar(i, 100), saveProject: saveProject);
                 }
             }
             Console.WriteLine("Finished.");

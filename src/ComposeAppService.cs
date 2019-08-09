@@ -19,7 +19,7 @@ namespace ImageComposeEditorAutomation
         Action<string> onEvent;
         Action<int> onProgress;
 
-        public void Compose(string[] images, Action<string> onEvent = null, Action<int> onProgress = null)
+        public void Compose(string[] images, Action<string> onEvent = null, Action<int> onProgress = null, bool saveProject = false)
         {
             this.onEvent = onEvent;
             this.onProgress = onProgress;
@@ -29,6 +29,7 @@ namespace ImageComposeEditorAutomation
             var exportToDiskBtnLabel = ConfigurationManager.AppSettings["ExportToDisk-btn-label"];
             var exportPanoramaBtnLabel = ConfigurationManager.AppSettings["ExportPanorama-btn-label"];
             var saveBtnLabel = ConfigurationManager.AppSettings["Save-btn-label"];
+            var saveProjectLabel = ConfigurationManager.AppSettings["Save-project-label"];
             int saveWait = int.Parse(ConfigurationManager.AppSettings["Save-wait"]);
 
             var imgStr = string.Join(" ", images);
@@ -91,6 +92,7 @@ namespace ImageComposeEditorAutomation
 
                 try
                 {
+                    
                     var button2 = window.FindFirstDescendant(cf => cf.ByText(exportToDiskBtnLabel));
                     if (button2 != null && button2.ControlType != ControlType.Button)
                         button2 = button2.AsButton().Parent;
@@ -112,6 +114,31 @@ namespace ImageComposeEditorAutomation
                     buttonSave?.Invoke();
                     
                     Thread.Sleep(saveWait);
+
+                    if (saveProject)
+                    {
+                        window.Close();
+                        var onCloseDlg = window.ModalWindows[0];                            
+                        var buttonOnCloseSave = onCloseDlg.FindFirstDescendant(cf => cf.ByText(saveBtnLabel)).AsButton();
+                        buttonOnCloseSave?.Invoke();
+
+                        var saveProjectDlg = window.ModalWindows[0];
+                            
+                        var projectName = saveProjectDlg.FindFirstDescendant(cf => cf.ByControlType(ControlType.ComboBox)).AsComboBox();
+                        projectName.EditableText = Path.GetFileNameWithoutExtension(images[0]);
+                        var buttonSaveProjectSave = saveProjectDlg.FindFirstDescendant(cf => cf.ByText(saveBtnLabel)).AsButton();
+                        buttonSaveProjectSave?.Invoke();
+
+
+                        //var buttonSaveProj = window.FindFirstDescendant(cf => cf.ByText(saveProjectLabel));
+                        //if (buttonSaveProj != null && buttonSaveProj.ControlType != ControlType.Button)
+                        //    buttonSaveProj = buttonSaveProj.AsButton().Parent;
+                        //var saveProj = buttonSaveProj?.AsButton();
+                        //if (saveProj.IsEnabled)
+                        //    buttonSaveProj?.AsButton().Invoke();
+                        OnEvent("saving project...");
+                    }
+
                 }
                 catch (Exception ex)
                 {
