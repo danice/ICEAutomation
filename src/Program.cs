@@ -25,7 +25,7 @@ namespace ImageComposeEditorAutomation
                 var extension = args.Length > 2 ? args[2] : "*.JPG";
                 if (args.Length > 3)
                     Directory.SetCurrentDirectory(args[3]);
-                var files = GroupFiles(extension, num);
+                var files = GroupFiles(extension, num, ignoreStichInName: true);
                 int total = files.Count;
                 int count = 0;
                 foreach (var item in files)
@@ -39,12 +39,19 @@ namespace ImageComposeEditorAutomation
             Console.WriteLine("Finished.");
         }
 
-        private static List<string[]> GroupFiles(string extension, int groupNum)
+        private static List<string[]> GroupFiles(string extension, int groupNum, bool ignoreStichInName = false)
         {
             string[] filePaths = Directory.GetFiles(Directory.GetCurrentDirectory(), extension, SearchOption.TopDirectoryOnly);
+            if (ignoreStichInName)
+                filePaths = filePaths.Where(f => !IsStitchResult(Path.GetFileName(f))).ToArray();
 
             return filePaths.Select((value, index) => new { value, index })
                     .GroupBy(x => x.index / groupNum, x => Path.GetFileName(x.value)).Select(g => g.ToArray()).ToList();
+        }
+
+        private static bool IsStitchResult(string fileName)
+        {
+            return fileName.Contains("_stitch");            
         }
 
         private static void drawTextProgressBar(int progress, int total)
