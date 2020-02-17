@@ -43,10 +43,18 @@ namespace ImageComposeEditorAutomation
                 Window window = null;
                 do
                 {
-                    app = FlaUI.Core.Application.Attach(appName);
-                    window = app.GetMainWindow(automation);
-                    title = window.Title;
-                    OnEvent("Opened :" + title);
+                    try
+                    {
+                        app = FlaUI.Core.Application.Attach(appName);
+                        window = app.GetMainWindow(automation);
+                        title = window.Title;
+                        OnEvent("Opened :" + title);
+                    }
+                    catch (Exception)
+                    {
+                        title = null;
+                    }
+                    
                 } while (string.IsNullOrWhiteSpace(title));
                                 
                 OnEvent("files :" + imgStr);
@@ -147,6 +155,7 @@ namespace ImageComposeEditorAutomation
 
             }
             app.Kill();
+            app = null;
         }
 
         private void OnEvent(string message)
