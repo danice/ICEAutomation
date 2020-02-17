@@ -42,11 +42,30 @@ namespace ImageComposeEditorAutomation
         private static List<string[]> GroupFiles(string extension, int groupNum, bool ignoreStichInName = false)
         {
             string[] filePaths = Directory.GetFiles(Directory.GetCurrentDirectory(), extension, SearchOption.TopDirectoryOnly);
-            if (ignoreStichInName)
-                filePaths = filePaths.Where(f => !IsStitchResult(Path.GetFileName(f))).ToArray();
+            string[] stichFilePaths = null;
 
-            return filePaths.Select((value, index) => new { value, index })
+            if (ignoreStichInName)
+            {
+                stichFilePaths = filePaths.Where(f => IsStitchResult(Path.GetFileName(f))).Select(s => Path.GetFileName(s).ToLower()).ToArray();
+                filePaths = filePaths.Where(f => !IsStitchResult(Path.GetFileName(f))).ToArray();              
+            }
+
+            var grouped = filePaths.Select((value, index) => new { value, index })
                     .GroupBy(x => x.index / groupNum, x => Path.GetFileName(x.value)).Select(g => g.ToArray()).ToList();
+
+            if (ignoreStichInName)
+            {
+                grouped = grouped.Where(g => !FileAlreadyInStich(g[0], stichFilePaths)).ToList();
+            }
+
+            return grouped;
+        }
+
+        private static bool FileAlreadyInStich(string fileName, string[] stichFilePaths)
+        {
+
+            var stichName = Path.GetFileNameWithoutExtension(fileName) + "_stitch" + Path.GetExtension(fileName);
+            return stichFilePaths.Contains(stichName.ToLower());
         }
 
         private static bool IsStitchResult(string fileName)
