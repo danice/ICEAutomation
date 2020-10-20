@@ -103,8 +103,16 @@ namespace ImageComposeEditorAutomation
             ////draw totals
             //Console.CursorLeft = 35;
             //Console.BackgroundColor = ConsoleColor.Black;
-            Console.CursorLeft = 15;
+            try
+            {                   
+              Console.CursorLeft = 15;
+            }
+            catch (System.Exception)
+            {
+                                
+            }
             Console.Write(progress.ToString() + " of " + total.ToString() + "    "); //blanks at the end remove any excess
+
         }
     }
 }
