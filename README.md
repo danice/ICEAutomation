@@ -14,8 +14,9 @@ A command line application to bach process image stitching using the marvellous 
 - "ICEAutomation process [num] [ext]" to process all files with extension [ext] in current folder in groups of [num]
 - "ICEAutomation process [num] [ext] [folder]" to process all files with extension [ext] in [folder] in groups of [num]
 
-The "process" option could be replaced processAndSave to store each project file. For example 
-- "ICEAutomation processAndSave" to process all *.JPG files in current folder in groups of 3 saving each project file
+Options:
+  - --motion: to specify Camera motion type. Default: autoDetect. Possible values: autoDetect , planarMotion, planarMotionWithSkew, planarMotionWithPerspective, rotatingMotion]
+  - --save: saves stich processing file
 
 # Warning
 
