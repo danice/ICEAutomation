@@ -12,48 +12,14 @@ namespace ImageComposeEditorAutomation
 {
     class Program
     {
-        [Verb("compose", HelpText = "compose <file1> <file2> <file3>....  Stich file1 fil2,... ")]
-        public class ComposeOptions
-        {
-            [Value(0)]
-            public List<string> Images { get; set; }
-
-            [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
-            public bool Verbose { get; set; }
-
-            [Option('s', "save", Required = false, HelpText = "Save project file.")]
-            public bool? Save { get; set; }
-
-            [Option('m', "motion", Required = false, HelpText = "Set camera motion.")]
-            public CameraMotion Motion { get; set; }
-        }
-        [Verb("process", HelpText = "process <num> <ext> <folder>. Process all <ext=*.JPG> files in <folder=current> in groups of <num=3>")]
-        public class ProcessOptions
-        {            
-            [Value(0)]
-            public int Num { get; set; }
-
-            [Value(1)]
-            public string Extension { get; set; }
-            [Value(2)]
-            public string Folder { get; set; }
-
-            [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
-            public bool Verbose { get; set; }
-
-            [Option('s', "save", Required = false, HelpText = "Save project file.")]
-            public bool? Save { get; set; }
-
-            [Option('m', "motion", Required = false, HelpText = "Set camera motion.", Default = CameraMotion.autoDetect)]
-            public CameraMotion Motion { get; set; }
-        }
 
         static void Main(string[] args)
         {
             var parser = new Parser(config => config.HelpWriter = Console.Out);
-            var options = parser.ParseArguments<ComposeOptions, ProcessOptions>(args)
+            var options = parser.ParseArguments<ComposeOptions, ProcessOptions, StructurePanoramaOptions>(args)
                 .WithParsed<ComposeOptions>(options => Compose(options))
                 .WithParsed<ProcessOptions>(options => Process(options))
+                .WithParsed<StructurePanoramaOptions>(options => Process(options))
                 .WithNotParsed(errors => { }); // errors is a sequence of type IEnumerable<Error>                                
             Console.ReadLine();
         }
@@ -63,11 +29,11 @@ namespace ImageComposeEditorAutomation
             Console.WriteLine("composing...");
             var composeApp = new ComposeAppService();
             var saveProject = options.Save.HasValue ? options.Save.Value : false;
-            composeApp.Compose(options.Images.ToArray(), options.Motion, m => Console.WriteLine(m), i => drawTextProgressBar(1, 100), saveProject);
+            composeApp.Compose(options.Images.ToArray(), options, m => Console.WriteLine(m), i => drawTextProgressBar(1, 100), saveProject);
 
         }
 
-        private static void Process(ProcessOptions options)
+        private static void Process(ProcessBaseOptions options)
         {
             var composeApp = new ComposeAppService();
 
@@ -85,7 +51,7 @@ namespace ImageComposeEditorAutomation
                 count++;
                 Console.WriteLine(string.Format("composing {0} of {1}....", count, total));
                 var saveProject = options.Save.HasValue ? options.Save.Value : false;
-                composeApp.Compose(item, options.Motion, m => Console.WriteLine(m), i => drawTextProgressBar(i, 100), saveProject: saveProject);
+                composeApp.Compose(item, options, m => Console.WriteLine(m), i => drawTextProgressBar(i, 100), saveProject: saveProject);
             }
             Console.WriteLine("Finished.");
         }

@@ -24,10 +24,22 @@ Next adjust the ICEAutomation.bat to point to this folder. Then copy the batch f
 - "ICEAutomation process [num]" to process all *.JPG files in current folder in groups of [num]
 - "ICEAutomation process [num] [ext]" to process all files with extension [ext] in current folder in groups of [num]
 - "ICEAutomation process [num] [ext] [folder]" to process all files with extension [ext] in [folder] in groups of [num]
+- "ICEAutomation structure [num] [ext] [folder]" process as before but using structure panorama 
 
 Options:
   - --motion: to specify Camera motion type. Default: autoDetect. Possible values: autoDetect , planarMotion, planarMotionWithSkew, planarMotionWithPerspective, rotatingMotion]
   - --save: saves stich processing file
+
+Structure panorama options:
+  - --initial-corner: topLef (default), topRight, bottomLeft, bottomRight
+  - --rows: Number of rows. If defined the direction will be down (if intial corner is top) or up (if initial corner is bottom)
+  - --cols: Number of columns. If defined the direction will be right (if intial corner is left) or left (if initial corner is right)
+  - --order: serpentine, zigzag
+  - --angular-range: less360, horiz, vert  (pending)
+  - --horizontal-overlap
+  - --vertical-overlap
+  - --search-radious  (pending)
+  - --auto-overlap (pending)
 
 # Warning
 

@@ -18,27 +18,16 @@ using System.Threading.Tasks;
 
 namespace ImageComposeEditorAutomation
 {
-    public enum CameraMotion
-    {
-        [Description("Auto-detect")]
-        autoDetect,
-        [Description("Planar motion")]
-        planarMotion,
-        [Description("Planar motion with skew")]
-        planarMotionWithSkew,
-        [Description("Planar motion with perspective")]
-        planarMotionWithPerspective,
-        [Description("Rotating motion")]
-        rotatingMotion
-    }
 
     public class ComposeAppService
     {
         Action<string> onEvent;
         Action<int> onProgress;
+        Application app;
 
-        public void Compose(string[] images, CameraMotion cameraMotion, Action<string> onEvent = null, Action<int> onProgress = null, bool saveProject = false)
+        public void Compose(string[] images, BaseOptions options, Action<string> onEvent = null, Action<int> onProgress = null, bool saveProject = false)
         {
+            var cameraMotion = options.Motion;
             this.onEvent = onEvent;
             this.onProgress = onProgress;
             var appStr = ConfigurationManager.AppSettings["ICE-app-path"];
@@ -53,8 +42,9 @@ namespace ImageComposeEditorAutomation
 
             var imgStr = string.Join(" ", images);
             var processStartInfo = new ProcessStartInfo(fileName: appStr, arguments: imgStr);
-            var app = FlaUI.Core.Application.Launch(processStartInfo);
-            
+            this.app = FlaUI.Core.Application.Launch(processStartInfo);
+
+
             using (var automation = new UIA3Automation())
             {
                 string title = null;
@@ -76,17 +66,13 @@ namespace ImageComposeEditorAutomation
                 } while (string.IsNullOrWhiteSpace(title));
 
                 OnEvent("files :" + imgStr);
-                if (cameraMotion != CameraMotion.autoDetect)
-                {
-                    var window2 = app.GetMainWindow(automation);
-                    var comboBoxes = window.FindAllDescendants(cf => cf.ByControlType(ControlType.ComboBox)).Select(x => x.AsComboBox());
-                    var cameraActionSelect = comboBoxes.FirstOrDefault(x => x.Items.Length > 0 && x.Items[0].Name == "Auto-detect");
-                    if (cameraActionSelect != null)
-                    {
-                         var descAttr = GetAttribute<DescriptionAttribute>(cameraMotion);
-                        cameraActionSelect.Select(descAttr.Description);
-                    }
-                }
+                if (options is StructurePanoramaOptions)
+                    SetStructurePanorama(automation);
+
+                SetCameraMotion(automation, options.Motion);
+
+                if (options is StructurePanoramaOptions)
+                    SetStructurePanoramaOptions(automation, (StructurePanoramaOptions)options);
 
                 try
                 {
@@ -149,7 +135,10 @@ namespace ImageComposeEditorAutomation
                         ? window.ModalWindows[0]
                         : window.ModalWindows.FirstOrDefault(w => w.Name == exportPanoramaBtnLabel);
                     var buttonSave = saveDlg.FindFirstDescendant(cf => cf.ByText(saveBtnLabel)).AsButton();
-                    buttonSave?.Invoke();
+                    if (buttonSave == null) {
+                        OnEvent("Save button not found: "+saveBtnLabel);
+                    } else 
+                        buttonSave?.Invoke();
 
                     Thread.Sleep(saveWait);
 
@@ -188,6 +177,132 @@ namespace ImageComposeEditorAutomation
             app = null;
         }
 
+        void SetCameraMotion(UIA3Automation automation, CameraMotion cameraMotion)
+        {
+            if (cameraMotion == CameraMotion.autoDetect)
+                return;
+
+            var window2 = app.GetMainWindow(automation);
+            var comboBoxes = window2.FindAllDescendants(cf => cf.ByControlType(ControlType.ComboBox)).Select(x => x.AsComboBox());
+            var cameraActionSelect = comboBoxes.FirstOrDefault(x => x.Items.Length > 0 && x.Items[0].Name == "Auto-detect");
+            if (cameraActionSelect != null)
+            {
+                var descAttr = GetAttribute<DescriptionAttribute>(cameraMotion);
+                cameraActionSelect.Select(descAttr.Description);
+            }
+
+
+        }
+
+        void SetStructurePanorama(UIA3Automation automation)
+        {
+            var window2 = app.GetMainWindow(automation);
+            AutomationElement button2 = null;
+
+            do
+            {
+                button2 = window2.FindFirstDescendant(cf => cf.ByText("Structured panorama"));
+            } while (button2 == null);
+            if (button2 != null && button2.ControlType != ControlType.Button)
+                button2 = button2.AsButton().Parent;
+            var list = button2.AsListBox().Select(1);
+
+
+            //button2.Click();
+        }
+
+
+        void SetStructurePanoramaOptions(UIA3Automation automation, StructurePanoramaOptions options)
+        {
+            var window = app.GetMainWindow(automation);
+
+            try
+            {
+                 // Initial corner and direction - top left
+                var pos1 = GetPosition1(options.InitialCorner);
+                var pos2 = GetPosition2(options.InitialCorner, options.Rows);
+                var layout = window.FindFirstDescendant(cf => cf.ByName("Layout"));
+                var b1 = layout.FindChildAt(pos1);
+                //var str = layout.FindAllDescendants().Select(d => string.Format("id: {0} {1} [{2}]", d.AutomationId, d.HelpText, d.Name)).ToList();
+                //Console.WriteLine(string.Join(",", str));
+                b1.AsRadioButton().IsChecked = true;
+
+                var b2 = layout.FindChildAt(pos2);
+                b2.AsRadioButton().IsChecked = true;   
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);                
+            }
+
+            try
+            {                
+                // Number of columns - 3x3
+                var numOfRowsOrColumns = options.Rows.HasValue ? options.Rows.Value : options.Columns.Value;
+                var b3 = options.Rows.HasValue 
+                    ? window.FindFirstDescendant(cf => cf.ByAutomationId("rowCountTextBox"))
+                    : window.FindFirstDescendant(cf => cf.ByAutomationId("primaryDirectionImageCountTextBox"));
+                b3.AsTextBox().Enter(numOfRowsOrColumns.ToString());
+
+                //Serpentine
+                var radiobutton = window.FindFirstDescendant(cf => cf.ByAutomationId("serpentineRadioButton")).AsRadioButton();
+                radiobutton.IsChecked = true;
+                
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);                     
+            }
+
+            try
+            {                
+                //Overlap percentage
+                var overlap = window.FindFirstDescendant(cf => cf.ByName("Overlap"));
+                // var str2 = overlap.FindAllDescendants().Select(d => string.Format("<{2}> id: {0} {1} [{3}]", d.AutomationId, d.HelpText, d.ControlType.ToString(), d.Name)).ToList();
+                // Console.WriteLine(string.Join("\n\r", str2));
+
+                var overlapH = options.HorizontalOverlap ?? 10;
+                var overlapV = options.VerticalOverlap ?? 10;
+                window.FindFirstDescendant(cf => cf.ByAutomationId("horizontalOverlapTextBox")).AsTextBox().Enter(overlapH.ToString());
+                window.FindFirstDescendant(cf => cf.ByAutomationId("verticalOverlapTextBox")).AsTextBox().Enter(overlapV.ToString());
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);            
+            }           
+
+        }
+        int GetPosition1(Corner corner)
+        {
+            if (corner == Corner.topLeft)
+                return 5;
+            if (corner == Corner.topRight)
+                return 6;
+            if (corner == Corner.bottomLeft)
+                return 7;
+            return 8;  //"Start in bottom right corner"
+        }
+
+        int GetPosition2(Corner corner, int? rows)
+        {
+            if (corner == Corner.topLeft)
+                return rows.HasValue 
+                    ? 11  //Start moving down
+                    : 9;  //Start moving right
+            if (corner == Corner.topRight)
+                return rows.HasValue 
+                    ? 12  //Start moving down
+                    : 10; //Start moving left
+            if (corner == Corner.bottomLeft)
+                return rows.HasValue 
+                    ? 13  //Start moving up
+                    : 15;  //Start moving right
+            return rows.HasValue 
+                    ? 14  //Start moving up
+                    : 16; //Start moving left
+        }
+
         public static T GetAttribute<T>(Enum enumeration) where T : Attribute
         {
             var type = enumeration.GetType();
@@ -204,8 +319,6 @@ namespace ImageComposeEditorAutomation
 
             return attributes.Single() as T;
         }
-
-
 
         private void OnEvent(string message)
         {
