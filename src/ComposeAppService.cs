@@ -247,6 +247,13 @@ namespace ImageComposeEditorAutomation
                 //Serpentine
                 var radiobutton = window.FindFirstDescendant(cf => cf.ByAutomationId("serpentineRadioButton")).AsRadioButton();
                 radiobutton.IsChecked = true;
+
+                //Angular range
+                if (!options.AngularRange.Equals("less360"))
+                {
+                    var radioButton = window.FindAllDescendants(cf => cf.ByControlType(ControlType.RadioButton).And(cf.ByName( GetAngularName(options.AngularRange.ToString()) ))).FirstOrDefault().AsRadioButton();
+                    radioButton.IsChecked = true;
+                }
                 
             }
             catch (Exception ex)
@@ -301,6 +308,16 @@ namespace ImageComposeEditorAutomation
             return rows.HasValue 
                     ? 14  //Start moving up
                     : 16; //Start moving left
+        }
+
+        string GetAngularName(String angular)
+        {
+            if (angular.Equals("horiz"))
+                return "360° horizontally";
+            if (angular.Equals("vert"))
+                return "360° vertically";
+            return "Less than 360°";
+
         }
 
         public static T GetAttribute<T>(Enum enumeration) where T : Attribute
