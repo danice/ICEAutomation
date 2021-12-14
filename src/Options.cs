@@ -105,7 +105,7 @@ namespace ImageComposeEditorAutomation
     [Verb("structure", HelpText = "process <num> <ext> <folder>. Process all <ext=*.JPG> files in <folder=current> in groups of <num=3>")]
     public class StructurePanoramaOptions : ProcessBaseOptions
     {
-        [Option('i', "initial-corner", Required = false, HelpText = "Initial corner: topLef (default), topRight, bottomLeft, bottomRight", Default = Corner.topLeft)]
+        [Option('i', "initial-corner", Required = false, HelpText = "Initial corner: topLeft (default), topRight, bottomLeft, bottomRight", Default = Corner.topLeft)]
         public Corner InitialCorner { get; set; }
 
         [Option('r', "rows", Required = false, HelpText = "Number of rows. If defined the direction will be down (if intial corner is top) or up (if initial corner is bottom)", Default = null)]
