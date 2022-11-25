@@ -79,7 +79,7 @@ namespace ImageComposeEditorAutomation
     public class ComposeOptions : BaseOptions
     {
         [Value(0)]
-        public List<string> Images { get; set; }
+        public IEnumerable<string> Images { get; set; }
 
     }
     
